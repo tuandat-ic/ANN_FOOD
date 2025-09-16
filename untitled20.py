@@ -112,7 +112,7 @@ import cv2, numpy as np
 import matplotlib.pyplot as plt
 
 # Hàm dự đoán top 3
-def predict_flower():
+def predict_food():
     uploaded = files.upload()  # mở file picker Colab
     fname = next(iter(uploaded.keys()))
 
@@ -145,7 +145,7 @@ def predict_flower():
     plt.axis("off")
     plt.show()
 
-output.register_callback('predict_flower', predict_flower)
+output.register_callback('predict_food', predict_food)
 from IPython.display import display, HTML
 
 display(HTML("""
@@ -218,7 +218,7 @@ display(HTML("""
 <body>
     <h1>🍲 Nhận diện món ăn Việt Nam 🍲</h1>
     <div class="card">
-        <button id="predictBtn" onclick="google.colab.kernel.invokeFunction('predict_flower', [], {});">
+        <button id="predictBtn" onclick="google.colab.kernel.invokeFunction('predict_food', [], {});">
             📸 Chọn ảnh & Dự đoán
         </button>
         <button id="resetBtn" onclick="location.reload();">
