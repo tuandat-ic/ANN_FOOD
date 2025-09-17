@@ -128,7 +128,7 @@ import matplotlib.pyplot as plt
 
 IMG_SIZE = 60  # kích thước cho model
 
-# ===== Hàm xử lý dự đoán (logic từ đoạn 1, hiển thị top3 như đoạn 2) =====
+# ===== Hàm xử lý dự đoán =====
 def run_prediction():
     uploaded = files.upload()
     fname = next(iter(uploaded.keys()))
@@ -181,7 +181,7 @@ def run_prediction():
 def predict_food(): run_prediction()
 output.register_callback('predict_food', predict_food)
 
-# ===== HTML Giao diện (y nguyên đoạn 2) =====
+# ===== HTML Giao diện =====
 display(HTML("""
 <!DOCTYPE html>
 <html lang="vi">
