@@ -1,5 +1,7 @@
 !pip install tensorflow keras
-# 1. Upload & unzip dataset =====
+#  ANN TRAIN
+
+# 1. Upload & unzip dataset
 from google.colab import files
 import zipfile, os
 
@@ -11,12 +13,12 @@ extract_path = "/content/F_mono"
 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
     zip_ref.extractall(extract_path)
 
-# 2. Duyệt dữ liệu ảnh =====
+# 2. Duyệt dữ liệu ảnh
 import cv2
 import numpy as np
 
 x_data, y_data = [], []
-# Correctly list the class directories within the nested folder
+ # Correctly list the class directories within the nested folder
 class_base_path = os.path.join(extract_path, "F_mono")
 class_names = sorted([name for name in os.listdir(class_base_path) if os.path.isdir(os.path.join(class_base_path, name))])
 
@@ -24,7 +26,7 @@ print("Classes:", class_names)
 
 for label, class_name in enumerate(class_names):
     class_dir = os.path.join(class_base_path, class_name)
-# Recursively walk through subdirectories to find image files
+  # Recursively walk through subdirectories to find image files
     for root, dirs, files_in_dir in os.walk(class_dir):
         for fname in files_in_dir:
             fpath = os.path.join(root, fname)
@@ -34,7 +36,7 @@ for label, class_name in enumerate(class_names):
                 if img is None:
                     print(f"Warning: Could not read image file: {fpath}")
                     continue
-                img_resized = cv2.resize(img, (28, 28))
+                img_resized = cv2.resize(img, (60, 60))
                 x_data.append(img_resized)
                 y_data.append(label)
 
@@ -45,26 +47,26 @@ print("Dataset shape:", x_data.shape, y_data.shape)
 
   # 3. Reshape & one-hot
 if x_data.shape[0] > 0: # Only proceed if data is loaded
-  x_data = x_data.reshape(x_data.shape[0], 28*28)  # flatten
+  x_data = x_data.reshape(x_data.shape[0], 60*60)  # flatten
   from keras.utils import to_categorical
   y_data = to_categorical(y_data, num_classes=len(class_names))
 
   # 4. Chia train/test
   from sklearn.model_selection import train_test_split
   x_train, x_test, y_train, y_test = train_test_split(
-      x_data, y_data, test_size=0.2, random_state=42 # Removed stratify=y_data
+      x_data, y_data, test_size=0.2, random_state=42
   )
 
   print("Train:", x_train.shape, y_train.shape)
   print("Test:", x_test.shape, y_test.shape)
 
-  #5. Xây dựng ANN
+  # 5. Xây dựng ANN
   from keras.models import Sequential
   from keras.layers import Dense
   from keras.layers import Dropout # Import Dropout layer
 
   model = Sequential()
-  model.add(Dense(512, activation='relu', input_shape=(784,)))
+  model.add(Dense(512, activation='relu', input_shape=(60*60,))) # Changed input shape
   model.add(Dropout(0.3)) # Added Dropout layer
   model.add(Dense(256, activation='relu')) # Added Dense layer
   model.add(Dropout(0.3)) # Added Dropout layer
@@ -78,14 +80,15 @@ if x_data.shape[0] > 0: # Only proceed if data is loaded
 
   # 6. Huấn luyện
   history = model.fit(x_train, y_train,
-                      epochs=200,
+                      epochs=500,
                       batch_size=128,
                       validation_data=(x_test, y_test))
 
   # 7. Lưu model
   model.save("final_model.h5")
-  print("✅ Model saved!")
-  # 8.Up flie kiểm tra
+  print("Model saved!")
+# UP ẢNH ĐỂ TEST
+
 from google.colab import files
 uploaded = files.upload()
 fname = next(iter(uploaded.keys()))
@@ -94,39 +97,73 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
-img_resized = cv2.resize(img, (28,28))
-img_norm = img_resized.astype("float32")/255.0
-img_ready = img_norm.reshape(1, 28*28)
+IMG_SIZE = 60
 
+# 1. Đọc ảnh màu gốc
+img_color = cv2.imread(fname, cv2.IMREAD_COLOR)
+if img_color is None:
+    raise ValueError("Không đọc được ảnh test!")
+
+# 2. Tạo bản resize grayscale để predict
+img_gray = cv2.cvtColor(img_color, cv2.COLOR_BGR2GRAY)
+img_resized = cv2.resize(img_gray, (IMG_SIZE, IMG_SIZE)) # Changed image size
+img_norm = img_resized.astype("float32") / 255.0
+img_ready = img_norm.reshape(1, IMG_SIZE*IMG_SIZE) # Changed image size
+
+# 3. Dự đoán
 preds = model.predict(img_ready)
 digit = class_names[np.argmax(preds)]
-print("Dự đoán:", digit)
+print("✅ Dự đoán:", digit)
 
-plt.imshow(img_norm, cmap="gray")
-plt.title(f"DỰ ĐOÁN ĐÂY LÀ : {digit}")
+# 4. Hiển thị ảnh
+plt.imshow(cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB))
 plt.axis("off")
+plt.title(f"Dự đoán: {digit}")
 plt.show()
+# ===== IMPORT =====
 from google.colab import files, output
-import cv2, numpy as np
+import cv2, numpy as np, base64
+from IPython.display import display, HTML
 import matplotlib.pyplot as plt
 
-# Hàm dự đoán top 3
-def predict_food():
-    uploaded = files.upload()  # mở file picker Colab
+IMG_SIZE = 60  # kích thước cho model
+
+# ===== Hàm xử lý dự đoán (logic từ đoạn 1, hiển thị top3 như đoạn 2) =====
+def run_prediction():
+    uploaded = files.upload()
     fname = next(iter(uploaded.keys()))
 
-    img = cv2.imread(fname, cv2.IMREAD_GRAYSCALE)
-    img_resized = cv2.resize(img, (28,28))
-    img_norm = img_resized.astype("float32")/255.0
-    img_ready = img_norm.reshape(1, 28*28)
+    # Đọc ảnh màu gốc
+    img_color = cv2.imread(fname)
+    img_color = cv2.cvtColor(img_color, cv2.COLOR_BGR2RGB)
 
+    # Chuẩn bị ảnh grayscale 60x60 cho model
+    img_gray = cv2.cvtColor(img_color, cv2.COLOR_RGB2GRAY)
+    img_resized = cv2.resize(img_gray, (IMG_SIZE, IMG_SIZE))
+    img_norm = img_resized.astype("float32")/255.0
+    img_ready = img_norm.reshape(1, IMG_SIZE*IMG_SIZE)
+
+    # Dự đoán
     preds = model.predict(img_ready)[0]
     top_indices = preds.argsort()[-3:][::-1]
     top_labels = [class_names[i] for i in top_indices]
     top_probs = [preds[i] for i in top_indices]
 
-    html_result = f"<div>Dự đoán chính: <b>{top_labels[0]}</b></div>"
+    # Encode ảnh gốc để hiển thị
+    _, buffer = cv2.imencode('.png', cv2.cvtColor(img_color, cv2.COLOR_RGB2BGR))
+    img_base64 = base64.b64encode(buffer).decode('utf-8')
+
+    # HTML kết quả
+    html_result = f"""
+        <div>
+            <img src="data:image/png;base64,{img_base64}"
+                 style="max-width:350px; border-radius:15px; box-shadow:0 0 10px #ff9800;">
+            <div style="margin-top:10px; font-size:22px; font-weight:bold; color:#BF360C;">
+                📸 Dự đoán chính: {top_labels[0]} ({top_probs[0]*100:.2f}%)
+            </div>
+        </div>
+    """
+
     html_top3 = "<ul style='list-style:none; padding-left:0;'>"
     for label, prob in zip(top_labels, top_probs):
         html_top3 += f"<li>{label}: {prob*100:.2f}%</li>"
@@ -140,14 +177,11 @@ def predict_food():
         </script>
     """))
 
-    plt.imshow(img_norm, cmap="gray")
-    plt.title(f"Dự đoán chính: {top_labels[0]}")
-    plt.axis("off")
-    plt.show()
-
+# ===== Callback =====
+def predict_food(): run_prediction()
 output.register_callback('predict_food', predict_food)
-from IPython.display import display, HTML
 
+# ===== HTML Giao diện (y nguyên đoạn 2) =====
 display(HTML("""
 <!DOCTYPE html>
 <html lang="vi">
